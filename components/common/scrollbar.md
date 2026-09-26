@@ -96,5 +96,5 @@ scrollbarRef.value?.wrap
 
 - 自定义滚动条在**鼠标悬浮**时才显示（`group-hover` 控制透明度）。
 - 组件依赖 `~/utils` 中的 `addResizeListener` / `removeResizeListener` 监听尺寸变化；若容器尺寸恒定，建议传 `noresize` 避免持续监听。
-- `index.ts` 除导出 `Scrollbar` 外还 re-export 了 `ScrollbarProps`、`ScrollbarInstance` 等类型名，但 `types.ts` 中并未定义这些名称，实际可用类型以 `types.ts`（如 `BarMap`、`ScrollbarType`）为准。
+- `index.ts` 除导出 `Scrollbar` 外还 re-export 了 `BarMap`、`BarMapItem`、`ScrollbarType` 三个类型，可直接从 `~/components/common/Scrollbar` 引入。
 - 传入的 `height` 属性并非组件 prop，不会参与滚动计算；请在外部容器上控制高度。

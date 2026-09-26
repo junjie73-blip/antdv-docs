@@ -1,11 +1,5 @@
 # TenantSelect 租户选择
 
-::: warning 当前无法直接使用
-该组件依赖 `~/stores/modules/tenant` 的 `useTenantStore`，但仓库中**并不存在** `src/stores/modules/tenant.ts`（现有 store 只有 app / auth / dict / route / user），因此引入本组件会因模块解析失败而报错。同时全仓库没有任何页面调用它。
-
-本文按源码如实记录其对外契约，供后续补齐 store 时参考，示例代码在 store 落地前无法运行。
-:::
-
 基于租户 Store（`useTenantStore`）的租户下拉框，封装 Antdv Next `Select`。通过 `valueType` 决定 v-model 绑定的是租户编码（登录场景）还是租户 ID（管理端场景），选项行内同时展示租户名称与编码。
 
 ## 基础用法
@@ -68,6 +62,8 @@ tenantSelectRef.value?.refresh()
 ## 依赖
 
 组件通过 `useTenantStore`（`~/stores/modules/tenant`）读取 `options`、`loading`，并调用 `load()` 拉取数据。挂载时若 `immediate` 为 `true` 会静默加载，加载失败不弹提示，由父级自行处理。
+
+`load(force = false)` 默认复用已有数据，只有传入 `force: true`（即 `refresh()`）才会重新请求 `/tenant/options`；选项数据存放在内存中，多实例共享同一份。
 
 ## 典型使用场景
 
