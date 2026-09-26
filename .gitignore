@@ -1,0 +1,9 @@
+# 构建缓存与产物
+node_modules
+.vitepress/cache
+.vitepress/dist
+
+# 编辑器与系统
+.DS_Store
+*.local
+.idea
