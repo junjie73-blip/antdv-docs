@@ -79,6 +79,11 @@ build: {
 | `vendor-vue` | `vue` / `pinia` / `vue-router` |
 | `vendor-echarts` | `echarts` |
 | `vendor-utils` | `@vueuse` / `es-toolkit` / `dayjs` / `xlsx` |
+| `vendor-office` | `@vue-office` |
+| `vendor-pdfjs` | `pdfjs-dist` |
+| `vendor-i18n` | `@intlify` / `vue-i18n` |
+| `vendor-highlight` | `highlight.js` |
+| `vendor-editor` | `@form-create` / `prosemirror` / `marked` |
 | `vendor` | 其余 `node_modules` 依赖 |
 
 **输出目录结构：**

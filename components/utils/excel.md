@@ -39,13 +39,15 @@ exportToExcel({
 |------|------|------|
 | `header` | `string` | 表头文字 |
 | `key` | `string` | 对应数据字段名 |
-| `width` | `number` | 列宽（autoWidth=true 时作为最小宽度） |
+| `width` | `number` | 列宽；设置了就直接作为该列宽度，未设置时按内容长度自动计算 |
 
-## 特性
+## 行为说明
 
-- **自动列宽** — 根据内容长度自动计算最佳宽度
-- **时间戳命名** — 自动追加时间戳避免文件覆盖
-- **Schema 驱动** — 与 Table 组件的 column 配置风格一致
+- 单元格值为 `null` / `undefined` 时导出为空字符串，值为对象时用 `JSON.stringify` 序列化。
+- `data` 为空数组（或未传）时**不会生成文件**，只弹出「没有可导出的数据」提示并直接返回。
+- 导出成功后会弹出「成功导出 N 条数据」提示。
+- 生成的文件名形如 `{filename}_{YYYYMMDD_HHmmss}.xlsx`（时间戳由 `dayjs` 生成）。
+- `autoWidth` 为 `false` 且没有任何列配置 `width` 时，不会写入列宽信息，交给 Excel 自行决定。
 
 ## 示例：从表格数据导出
 

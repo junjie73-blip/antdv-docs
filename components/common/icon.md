@@ -52,7 +52,7 @@ import { IconifyIcon } from '~/components/common/Icon'
 
 ## SvgIcon
 
-渲染对 `<svg><use href="#{prefix}-{name}" /></svg>` 的引用，用于本地 SVG Sprite 图标。
+渲染对 `<svg><use xlink:href="#{prefix}-{name}" /></svg>` 的引用，用于本地 SVG Sprite 图标。
 
 ### 基础用法
 

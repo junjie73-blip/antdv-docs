@@ -114,9 +114,9 @@ function handleSubmit(values: Record<string, any>) {
 
 | 属性 | 说明 | 类型 |
 |------|------|------|
-| `render` | 完全自定义渲染 | `(params) => VNode \| string` |
-| `renderColContent` | 自定义列内容渲染 | `(params) => VNode \| string` |
-| `renderComponentContent` | 自定义组件内部内容 | `(params) => any` |
+| `render` | 完全自定义渲染（类型中已声明，`FormItem` 当前未消费） | `(params) => VNode \| string` |
+| `renderColContent` | 自定义列内容渲染（类型中已声明，`FormItem` 当前未消费） | `(params) => VNode \| string` |
+| `renderComponentContent` | 自定义组件内部内容（类型中已声明，`FormItem` 当前未消费） | `(params) => any` |
 | `slot` | 插槽名称 | `string` |
 | `suffix` | 后缀内容 | `string \| number \| (params) => string` |
 | `helpMessage` | 帮助提示信息 | `string \| string[]` |
@@ -448,18 +448,7 @@ const [register] = useForm({
 
 ### 自定义渲染（render）
 
-当内置组件无法满足需求时，使用 `render` 完全自定义：
-
-```ts
-{
-  field: 'customSlot',
-  label: '自定义内容',
-  render: ({ values }) => h('div', { class: 'flex gap-2' }, [
-    h('span', '当前值:'),
-    h('span', { class: 'text-blue-500 font-medium' }, values.customSlot || '-'),
-  ]),
-}
-```
+`FormSchema` 类型中声明了 `render` / `renderColContent` / `renderComponentContent`，但当前 `FormItem` 组件并未消费这三个字段，仅靠它们无法生效；需要完全自定义时请改用下方的插槽方式。
 
 ### 插槽方式（slot）
 

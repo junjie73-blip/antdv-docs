@@ -235,8 +235,8 @@ exportToExcel({
 |--------|----------|
 | `null` | 空字符串 `''` |
 | `undefined` | 空字符串 `''` |
-| 普通对象 | `JSON.stringify()` 序列化 |
-| 其他值 | `String()` 转换 |
+| 普通对象（含数组） | `JSON.stringify()` 序列化 |
+| 其他值 | 原样写入（数字/日期等保持原类型） |
 
 ### 空数据处理
 
@@ -311,7 +311,7 @@ export interface PrintOptions {
   /**
    * 是否显示页脚
    *
-   * 页脚显示页码信息
+   * 页脚显示「第 / 页」占位文本
    * @default true
    */
   showFooter?: boolean
@@ -517,6 +517,8 @@ tr:nth-child(even) { background-color: #fafafa; }
   border-bottom: 2px solid #333;
   padding-bottom: 10px;
 }
+.print-header h1 { font-size: 18px; margin-bottom: 5px; }
+.print-header p { font-size: 12px; color: #666; }
 .print-footer {
   text-align: right;
   margin-top: 20px;

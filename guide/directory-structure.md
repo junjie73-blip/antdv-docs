@@ -9,7 +9,7 @@ antdv-next-admin/
 │   ├── api/                      # API 接口定义
 │   ├── assets/                   # 静态资源
 │   │   ├── images/               #   图片与文件类型图标
-│   │   └── styles/               #   全局样式（global.css / var.css）
+│   │   └── styles/               #   全局样式（global.css）
 │   ├── components/               # 公共组件
 │   │   ├── business/             #   业务组件
 │   │   │   ├── Table/            #     表格组件 ⭐
@@ -76,18 +76,13 @@ antdv-next-admin/
 │   │   ├── composables/          #   布局组合式函数（useLayout.ts）
 │   │   ├── widgets/              #   顶栏小部件（主题 / 通知 / 搜索 / 全屏等）
 │   │   └── DefaultLayout.vue     #   默认布局
-│   ├── monitor/                  # 前端埋点与上报
-│   │   ├── behavior/             #   行为埋点
-│   │   ├── error/                #   错误采集
-│   │   ├── performance/          #   性能采集
-│   │   └── reporter/             #   上报（含 Sentry）
 │   ├── router/                   # 路由配置
 │   │   ├── index.ts              #   路由实例
 │   │   ├── guards.ts             #   路由守卫
 │   │   └── routes.ts             #   路由定义
 │   ├── settings/                 # 应用设置
 │   │   ├── index.ts              #   默认设置
-│   │   └── theme.ts              #   主题 token
+│   │   └── theme/                #   主题 token
 │   ├── stores/                   # Pinia 状态管理
 │   │   └── modules/              #   Store 模块
 │   │       ├── app.ts            #     应用状态

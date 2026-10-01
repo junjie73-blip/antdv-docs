@@ -258,31 +258,49 @@ function createPermissionGuard(router: Router) {
 
 ```ts
 // src/directives/permission/index.ts
+const stateMap = new WeakMap<HTMLElement, ElementState>()
+
 export const vPermission: Directive = {
   mounted(el, binding) {
     // 记录原始 display，便于权限恢复
-    const state = {
+    const state: ElementState = {
       originalDisplay: el.style.display || '',
+      prevBinding: null,
+      stopWatch: null,
       disabledMode: !!binding.modifiers?.disabled,
     }
+    stateMap.set(el, state)
     performCheck(el, binding, state)
     // 监听权限变化，权限异步加载完成后自动重算
-    watch(() => userStore.permissions, () => performCheck(el, binding, state), { deep: true })
+    const stopWatch = watch(
+      () => useUserStore().permissions,
+      () => performCheck(el, binding, state),
+      { deep: true },
+    )
+    state.stopWatch = stopWatch
   },
   updated(el, binding) {
+    const state = stateMap.get(el)
+    if (!state) return
     // 仅在 value / arg 真正变化时才重跑
     if (!isBindingChanged(state.prevBinding, binding)) return
     state.disabledMode = !!binding.modifiers?.disabled
     performCheck(el, binding, state)
+  },
+  unmounted(el) {
+    stateMap.get(el)?.stopWatch?.()
+    stateMap.delete(el)
   },
 }
 
 // src/directives/permission/utils.ts —— resolveAccess 的优先级
 // 1. arg === 'role'  → hasRole / hasAnyRole / hasAllRoles（.all 决定任一/全部）
 // 2. arg === 'admin' → isAdmin
-// 3. value 为字符串  → hasPermission
-// 4. value 为数组    → .all ? hasAllPermissions : hasAnyPermission
-// 5. 未配置          → 默认有权限
+// 3. value 为 undefined / null → 默认有权限
+// 4. value 为字符串  → hasPermission
+// 5. value 为数组    → .all ? hasAllPermissions : hasAnyPermission
+// 6. value 为对象    → 按 .all 走 hasAllPermissions / hasAnyPermission
+// 7. 其他            → 默认有权限
 function resolveAccess(binding, helpers) {
   const { value, arg, modifiers = {} } = binding
 
@@ -342,13 +360,15 @@ export function clearAuth(): void {
 ### 请求拦截器注入
 
 ```ts
-// Alova 实例配置中的 beforeRequest
-beforeRequest(config) {
-  const token = getToken()
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
+// src/utils/request/alova.ts 中的 beforeRequest
+const userStore = useUserStore()
+
+// ---------- 加上 Authorization 头 ----------
+if (userStore.token) {
+  method.config.headers = {
+    ...method.config.headers,
+    [AUTHORIZATION_KEY]: `Bearer ${userStore.token}`,
   }
-  return config
 }
 ```
 
@@ -377,23 +397,14 @@ beforeRequest(config) {
 
 ## 动态路由生成流程
 
-路由表由 `src/stores/modules/route.ts` 统一管理，对外暴露两个初始化方法：
-
-### 前端路由模式
-
-```ts
-// src/stores/modules/route.ts
-const initFrontendRoutes = () => {
-  // 前端菜单已在 routes 中静态注册，这里仅标记已加载
-  isLoaded.value = true
-}
-```
+路由表由 `src/stores/modules/route.ts` 统一管理，对外暴露 `initBackendRoutes` / `generateBackendRoutes` / `resetRoutes`（**无前端静态路由模式**，菜单全部来自后端）：
 
 ### 后端路由模式
 
 ```ts
+// src/stores/modules/route.ts
 const initBackendRoutes = async () => {
-  const backendMenus = await fetchBackendMenus() // 从 API 获取菜单数据
+  const backendMenus = await fetchBackendMenus() // 请求 GET /auth/menus
   menus.value = backendMenus as unknown as MenuConfig[]
   routes.value = generateBackendRoutes(backendMenus)
   isLoaded.value = true
@@ -403,24 +414,36 @@ const initBackendRoutes = async () => {
 ### 菜单到路由的转换
 
 ```ts
-function generateRoutesFromBackendMenus(backendMenus: BackendMenu[]): InternalRoute[] {
+// src/stores/modules/route.ts
+// 解析组件路径：去掉后端下发的路径前缀
+function resolveComponentPath(component: string): string {
+  const cleaned = component.replace(/^@\//, '').replace(/^~\//, '')
+  return `/src/${cleaned}`
+}
+
+export function generateRoutesFromBackendMenus(backendMenus: BackendMenu[]): InternalRoute[] {
   return backendMenus
-    .filter(menu => menu.status === '1' && menu.menuType !== 3) // 只处理启用的目录和菜单，忽略按钮
-    .map((menu) => ({
-      path: menu.path || '',
-      name: menu.menuName,
-      meta: {
-        title: menu.menuName,
-        icon: menu.icon,
-        hidden: false,
-        keepAlive: false,
-        requiresAuth: true,
-        roles: [],  // 预留字段
-        permission: menu.permission ? [menu.permission] : [],
-      },
-      component: modules[`/src/${menu.component.replace(/^@\//, '')}`], // 动态导入
-      children: menu.children?.length ? generateRoutesFromBackendMenus(menu.children) : undefined,
-    }))
+    .filter(menu =>
+      menu.status === '1' // 只保留启用
+      && menu.menuType !== 3 // 忽略按钮
+      && !menu.isExternal // 外链不挂主布局
+      && menu.layout !== 'blank', // blank 布局单独注册
+    )
+    .map((menu) => {
+      const route: InternalRoute = {
+        path: menu.path || '',
+        name: menu.menuName,
+        // buildMeta()：title / icon / hidden / keepAlive / requiresAuth / permission 等
+        meta: buildMeta(menu),
+      }
+      if (menu.component) {
+        route.component = modules[resolveComponentPath(menu.component)] // 动态导入
+      }
+      if (menu.children?.length) {
+        route.children = generateRoutesFromBackendMenus(menu.children)
+      }
+      return route
+    })
 }
 ```
 

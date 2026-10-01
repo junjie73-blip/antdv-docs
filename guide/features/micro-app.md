@@ -1,6 +1,12 @@
 # 微前端集成
 
-本项目内置 **MicroAppContainer** 组件，通过 `<micro-app>` 自定义元素实现微前端子应用的加载与管理，支持 WebComponent 和 iframe 两种加载方式。
+本项目内置 **MicroAppContainer** 组件，通过 `<micro-app>` 自定义元素承载微前端子应用（仅 WebComponent 这一种渲染路径）。
+
+::: warning 依赖缺失现状
+源码中**未安装** `micro-app`（`@micro-zoe/micro-app`）依赖：`frontend/package.json` 与 `node_modules` 中均无，`index.html` / `vite.config.ts` 也未通过 CDN 引入。因此 `<micro-app>` 是无自定义元素定义的普通标签，不会真正加载子应用。
+
+当前实际可用的嵌入方式是 **iframe**，实现位于 `src/views/micro-app/SubAppView.vue`（外部站点/库缺失时回退 iframe）与微前端管理页 `src/views/system/micro-app/index.vue`。下文关于 WebComponent 生命周期的说明，需先接入 micro-app 库后才成立。
+:::
 
 ## 架构概述
 
@@ -17,11 +23,7 @@
 │  │  └─────────────┘  └─────────────┘        │   │
 │  │                                           │   │
 │  │  ┌─────────────────────────────────────┐  │   │
-│  │  │  <micro-app>                        │  │   │
-│  │  │  ┌─────────────────────────────┐    │  │   │
-│  │  │  │      子应用 (WebComponent)    │    │  │   │
-│  │  │  │  或 子应用 (iframe sandbox)  │    │  │   │
-│  │  │  └─────────────────────────────┘    │  │   │
+│  │  │  <micro-app>（需 micro-app 库支持）  │  │   │
 │  │  └─────────────────────────────────────┘  │   │
 │  └───────────────────────────────────────────┘   │
 │                                                   │
@@ -517,7 +519,7 @@ function handleRetry() {
 
 ## 主子应用通信
 
-MicroAppContainer 本身不处理通信逻辑，通信方式取决于子应用的加载模式。WebComponent 模式可基于 `<micro-app>` 自定义元素的数据接口与自定义事件通信；iframe 模式则通过 `postMessage` 通信：
+MicroAppContainer 本身不处理通信逻辑：它只渲染 `<micro-app>`，向子应用传参/通信需依托 micro-app 库的数据接口与自定义事件（库接入后）。项目的 iframe 嵌入场景（`SubAppView.vue` / 微前端管理页）则通过 `postMessage` 通信：
 
 ```ts
 // iframe 模式：主应用 → 子应用

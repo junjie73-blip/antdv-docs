@@ -11,7 +11,7 @@ App.vue
         ├── token（Design Token）
         └── components（组件级覆盖）
 
-settings/theme.ts
+settings/theme/index.ts
   └── getThemeConfig(style, isDark, appSetting) → ThemeConfig
 ```
 
@@ -40,7 +40,7 @@ const appStore = useAppStore()
 // 生成 Antdv Next 主题配置
 const themeConfig = computed(() => getThemeConfig(
   appStore.themeStyle,
-  appStore.themeMode === 'dark',  // 是否暗色
+  appStore.systemTheme === 'dark',  // 系统是否暗色（auto 模式用）
   appStore.appSetting,
 ))
 
@@ -92,7 +92,7 @@ const cardClassName = cn(
 
 ## 11 种主题风格说明
 
-主题风格（`ThemeStyle`）由 `AppSetting.themeStyle` 控制，项目内置 **11 种风格**。除配色、圆角由 `getThemeConfig` 统一输出外，各风格的差异化外观主要通过布局层的 CSS 类（如 `sidebar-geek`）实现。
+主题风格（`ThemeStyle`）由 `AppSetting.themeStyle` 控制，类型上定义了 **11 个可选值**（见下表）。但 `getThemeConfig(style, ...)` 内部并未使用 `style` 参数，配色/圆角只由 `appSetting.theme` + 覆盖项决定；目前仅 `geek` 在布局层有差异化实现（`sidebar-geek` 等 CSS 类），其余风格值暂无对应样式。
 
 ### 风格一览表
 
@@ -112,37 +112,36 @@ const cardClassName = cn(
 
 ### 主题配置生成
 
-`getThemeConfig(style, isDark, appSetting)` 是唯一的主题配置出口：
+`getThemeConfig(style, isDark, appSetting)` 是唯一的主题配置出口，实际委托给 `getAntdTheme`：
 
 ```ts
-// src/settings/theme.ts
-export function getThemeConfig(style: ThemeStyle, isDark: boolean, appSetting: AppSetting): ThemeConfig {
-  const preset: ThemeConfig = {
-    algorithm: defaultAlgorithm,
+// src/settings/theme/index.ts
+export function getAntdTheme(
+  mode: 'light' | 'dark' | 'auto',
+  isSystemDark = false,
+  overrides: { primaryColor?: string; borderRadius?: number; fontSize?: number } = {},
+): ThemeConfig {
+  const isDark = mode === 'dark' || (mode === 'auto' && isSystemDark)
+
+  return {
+    algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
     token: {
-      colorPrimary: '#1677ff',
-      borderRadius: 6,
+      ...(isDark ? darkToken : lightToken), // 项目自定义色板（src/settings/theme/*/token.ts）
+      ...(overrides.primaryColor && { colorPrimary: overrides.primaryColor }),
+      ...(overrides.borderRadius !== undefined && { borderRadius: overrides.borderRadius }),
+      ...(overrides.fontSize !== undefined && { fontSize: overrides.fontSize }),
     },
+    components: isDark ? darkComponents : lightComponents,
   }
+}
 
-  const algorithm = []
-  if (isDark && style !== 'dark') {
-    algorithm.push(darkAlgorithm)
-  } else {
-    algorithm.push(defaultAlgorithm)
-  }
-
-  const token = {
-    ...preset.token,
+function getThemeConfig(style: ThemeStyle, isDark: boolean, appSetting: AppSetting): ThemeConfig {
+  // 注意：style 未参与计算
+  return getAntdTheme(appSetting.theme, isDark, {
     fontSize: appSetting?.fontSize || 16,
     borderRadius: appSetting?.borderRadius * 8, // 圆角倍率 × 8
-    colorPrimary: appSetting?.primaryColor,
-  }
-  if (isDark) {
-    token.colorBgContainer = '#101828'
-  }
-
-  return { algorithm, token, components: preset.components }
+    primaryColor: appSetting?.primaryColor,
+  })
 }
 ```
 
@@ -159,7 +158,7 @@ export function getThemeConfig(style: ThemeStyle, isDark: boolean, appSetting: A
 <a-button @click="showSetting = true">
   <Icon icon="carbon:settings" /> 设置
 </a-button>
-<SettingDrawer v-model:open="showSetting" />
+<SettingDrawer v-model:visible="showSetting" />
 ```
 
 ### 代码中动态修改
@@ -184,18 +183,7 @@ appStore.updateSetting({ theme: 'dark' })
 
 ### CSS 变量同步
 
-主题色变更时会同步更新 CSS 变量，确保非组件库部分也能感知变化：
-
-```ts
-// App.vue
-watch(
-  () => appStore.primaryColor,
-  (color) => {
-    document.documentElement.style.setProperty('--ant-color-primary', color)
-  },
-  { immediate: true },
-)
-```
+主题色等 token 由 Antdv Next 的 ConfigProvider 下发，运行时自动生成对应 CSS 变量（如 `--ant-color-primary`），源码中无需手动 `document.documentElement.style.setProperty`。
 
 ### 在样式中使用 CSS 变量
 
@@ -214,13 +202,14 @@ watch(
 全局圆角通过 `borderRadius` 配置项控制，它表示 **圆角倍率**，在 `getThemeConfig` 中乘以 8 后写入 Antdv Next 的 `token.borderRadius`：
 
 ```ts
-// 可选倍率：0 / 0.25 / 0.5 / 0.75 / 1（默认 0.5，即 4px）
-const borderRadiusOptions = [
-  { label: '无圆角', value: 0 },
-  { label: '小圆角', value: 0.25 },
-  { label: '默认圆角', value: 0.5 },
-  { label: '中大圆角', value: 0.75 },
-  { label: '大圆角', value: 1 },
+// src/layouts/components/SettingDrawer/constants.ts
+// 可选倍率：0 / 0.25 / 0.5 / 0.75 / 1（DEFAULT_SETTING 默认 0.5，即 4px）
+export const BORDER_RADIUS_OPTIONS = [
+  { value: 0, label: '0' },
+  { value: 0.25, label: '0.25' },
+  { value: 0.5, label: '0.5' },
+  { value: 0.75, label: '0.75' },
+  { value: 1, label: '1' },
 ]
 
 // 使用
@@ -237,9 +226,9 @@ appStore.updateSetting({ borderRadius: 0.75 })
 // App.vue 中的 class 处理
 html.classList.toggle('color-weak', appStore.colorWeak)
 
-// 全局 CSS（通常在 base 样式中定义）
-html.color-weak {
-  filter: invert(80%);
+// src/assets/styles/global.css
+.color-weak {
+  filter: invert(100%);
 }
 ```
 
@@ -263,8 +252,8 @@ appStore.toggles.colorWeak()
 // App.vue 中的 class 处理
 html.classList.toggle('gray-mode', appStore.grayMode)
 
-// 全局 CSS
-html.gray-mode {
+// src/assets/styles/global.css
+.gray-mode {
   filter: grayscale(100%);
 }
 ```
@@ -354,21 +343,21 @@ appStore.updateSetting({ watermarkContent: '机密文件' })
 
 ## CSS 变量体系
 
-Antdv Next 基于 Design Token 体系运行，所有设计参数都映射为 CSS 变量。以下是常用的 CSS 变量：
+Antdv Next 基于 Design Token 体系运行，所有设计参数都映射为 CSS 变量。以下值取自项目色板 `src/settings/theme/light/token.ts`（浅色模式）：
 
 ### 颜色变量
 
-| CSS 变量 | 说明 | 默认值 |
+| CSS 变量 | 说明 | 项目值（light） |
 |----------|------|--------|
-| `--ant-color-primary` | 主题色 | `#1677ff` |
-| `--ant-color-success` | 成功色 | `#52c41a` |
-| `--ant-color-warning` | 警告色 | `#faad14` |
-| `--ant-color-error` | 错误色 | `#ff4d4f` |
-| `--ant-color-info` | 信息色 | `#1677ff` |
-| `--ant-color-text-base` | 基础文本色 | `rgba(0, 0, 0, 0.88)` |
+| `--ant-color-primary` | 主题色 | `#1677ff`（`DEFAULT_SETTING.primaryColor`，覆盖 token 的 `blue[600]`） |
+| `--ant-color-success` | 成功色 | `#10b981`（emerald-500） |
+| `--ant-color-warning` | 警告色 | `#f59e0b`（amber-500） |
+| `--ant-color-error` | 错误色 | `#f43f5e`（rose-500） |
+| `--ant-color-info` | 信息色 | `#0ea5e9`（sky-500） |
+| `--ant-color-text-base` | 基础文本色 | `#0f172a`（slate-900） |
 | `--ant-color-bg-container` | 容器背景色 | `#ffffff` |
 | `--ant-color-bg-elevated` | 浮层背景色 | `#ffffff` |
-| `--ant-color-border` | 边框色 | `#d9d9d9` |
+| `--ant-color-border` | 边框色 | `#cbd5e1`（slate-300） |
 
 ### 尺寸变量
 

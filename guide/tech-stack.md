@@ -11,9 +11,13 @@
 | Antdv Next   | ^1.5.4  | 企业级 UI 组件库 |
 | Tailwind CSS | ^4.3.3  | 原子化 CSS 引擎 |
 | Pinia        | ^3.0.4  | 状态管理方案     |
+| Vue Router   | ^4.6.4  | 路由方案       |
+| vue-i18n     | ^11.4.8 | 国际化方案      |
 | Alova        | ^3.5.4  | HTTP 请求客户端 |
+| Tiptap       | ^3.31.3 | 富文本编辑器     |
 | Vite         | ^8.2.2  | 构建开发工具     |
 | pnpm         | 10.12.4 | 包管理器       |
+| Node.js      | >=22.0.0 | 运行时        |
 
 ***
 
@@ -152,15 +156,15 @@ export interface ApiResponse<T = unknown> {
 #### 工具类型使用
 
 ```ts
-import type { isObject, isArray } from 'es-toolkit'
+import { isPlainObject } from 'es-toolkit'
 
 // 类型守卫函数（替代 typeof）
 function processInput(input: unknown) {
-  if (isObject(input)) {
+  if (isPlainObject(input)) {
     // input 被收窄为 Record<string, unknown>
     return Object.keys(input)
   }
-  if (isArray(input)) {
+  if (Array.isArray(input)) {
     // input 被收窄为 unknown[]
     return input.length
   }
@@ -452,66 +456,72 @@ Alova 是新一代请求工具库，相比传统 Axios 方案具有显著优势�
 
 #### 实例配置
 
+项目通过 `createRequestClient()` 工厂创建客户端，并导出一个默认单例 `http`；`src/utils/request/index.ts` 统一对外暴露 `createRequestClient` / `http` / `RequestError`。
+
 ```ts
 // src/utils/request/alova.ts
 import { createAlova } from 'alova'
 import adapterFetch from 'alova/fetch'
-import { getToken } from '~/utils/token'
+import VueHook from 'alova/vue'
+import { notification } from 'antdv-next'
 
-const http = createAlova({
-  baseURL: import.meta.env.VITE_APP_BASE_API,
-  requestAdapter: adapterFetch(),
+export function createRequestClient(options: CreateRequestClientOptions = {}) {
+  const fetchAdapter = adapterFetch({ customFetch })
 
-  // 请求拦截
-  beforeRequest(config) {
-    const token = getToken()
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
-    }
-    return config
-  },
+  return createAlova({
+    baseURL,
+    requestAdapter: fetchAdapter,
+    shareRequest: true, // 相同请求自动去重
+    statesHook: VueHook, // 支持 useRequest / useWatcher
+    timeout,
 
-  // 响应拦截
-  responded: {
-    onSuccess(response) {
-      if (response.status >= 200 && response.status < 300) {
-        return response.json()
+    // 请求拦截：注入 token / CSRF / 安全头
+    beforeRequest(method) {
+      const isAuthApi = isAuthEndpoint(method.url)
+      if (!isAuthApi && userStore.token) {
+        method.config.headers = {
+          ...method.config.headers,
+          Authorization: `Bearer ${userStore.token}`,
+        }
       }
-      throw new Error(`HTTP ${response.status}`)
+      // ...CSRF Token、通用安全头、请求去重、GET 缓存
     },
-    onError(err) {
-      message.error('网络请求失败')
-      throw err
-    },
-  },
-})
 
-export default http
+    // 响应拦截：401 无感刷新重试，其余错误统一提示
+    responded: {
+      async onSuccess(response, method) {
+        // 401 且未重试过 → 刷新令牌后 method.send() 重试
+        // 成功响应 `{ code: 200, data, message? }` 直接返回 payload
+      },
+      async onError(error, method) {
+        // 指数退避重试（仅 5xx / 网络错误），失败后 notification.error
+      },
+    },
+  })
+}
+
+export const http = createRequestClient()
+export { AlovaRequestError as RequestError }
 ```
 
 #### 业务接口定义
 
+`src/api/index.ts` 是 barrel，统一 `export * from './user'` 等分域文件；分域文件用 `src/api/request.ts` 的 `get/post/put/del` 封装（内部已 `.send()` 并解包 `res.data`）。
+
 ```ts
-// src/api/index.ts
-import http from '~/utils/request/alova'
+// src/api/user.ts
+import { del, get, post } from './request'
 
-// 用户相关
-export const userApi = {
-  // 获取用户列表
-  getList: (params: { page: number; pageSize: number }) =>
-    http.Get('/users', { params }),
+export function getUserList(params?: Record<string, unknown>) {
+  return get<{ list: any[], total: number }>('/user/list', params)
+}
 
-  // 创建用户
-  create: (data: CreateUserDTO) =>
-    http.Post('/users', data),
+export function updateUser(id: string, data: Record<string, any>) {
+  return post<any>(`/user/update/${id}`, data)
+}
 
-  // 更新用户
-  update: (id: string | number, data: UpdateUserDTO) =>
-    http.Put(`/users/${id}`, data),
-
-  // 删除用户
-  remove: (id: string | number) =>
-    http.Delete(`/users/${id}`),
+export function deleteUser(id: string) {
+  return del<void>(`/user/remove/${id}`)
 }
 ```
 
@@ -519,20 +529,10 @@ export const userApi = {
 
 ```vue
 <script setup lang="ts">
-import { userApi } from '~/api'
+import { getUserList } from '~/api'
 
-const loading = ref(false)
-const tableData = ref<UserInfo[]>([])
-
-async function fetchUsers() {
-  loading.value = true
-  try {
-    const res = await userApi.getList({ page: 1, pageSize: 10 })
-    tableData.value = res.data
-  }
-  finally {
-    loading.value = false
-  }
+async function fetchApi(params: Record<string, any>) {
+  return await getUserList(params)
 }
 </script>
 ```
@@ -598,12 +598,6 @@ pnpm run build
 
 # 预览生产构建
 pnpm run preview
-
-# 文档开发
-pnpm run docs:dev
-
-# 文档构建
-pnpm run docs:build
 ```
 
 ***

@@ -68,7 +68,7 @@ const current = ref({
 
 ## 已知限制
 
-- 分类由 `fileName` 后缀决定，**`category` prop 当前会被内部计算值覆盖**，请确保 `fileName` 正确。
+- 分类由 `fileName` 后缀决定，**`category` prop 当前会被内部计算值覆盖**，请确保 `fileName` 正确；`mimeType` prop 同样只声明、未参与任何判断。
 - 只有传入 `fileId` 才会调用 `previewFile` 获取预览地址；**仅传 `url` 时不会加载预览内容**（标题与下载仍可用）。
 - 预览地址来自 `previewFile`，下载地址来自 `downloadFile`，二者均由 `~/api` 提供。
 - Word / Excel / PPT 预览依赖 `@vue-office/*`，视频依赖 `@videojs-player/vue`，Markdown 依赖 `markdown-it`。

@@ -18,7 +18,7 @@
 | **错误处理** | JSON.parse 可能抛异常 | 内部 try-catch，返回 null 而非报错 |
 | **批量操作** | 需手动遍历 | 提供 `clear()` 按前缀批量清除 |
 
-> 注意：加密默认开启，但仅在**生产构建**（`import.meta.env.PROD`）下真正生效；开发环境不加密，便于调试。开发环境会使用默认密钥并打印警告，生产环境必须配置 `VITE_CACHE_ENCRYPT_KEY`（至少 16 位），否则初始化会抛错。
+> 注意：加密默认开启，但仅在**生产构建**（`import.meta.env.PROD`）下真正生效（`shouldEncrypt()` 只在 `PROD` 返回 `true`）；开发环境不加密、不读取密钥，便于调试。生产环境必须配置 `VITE_CACHE_ENCRYPT_KEY`（至少 16 位），否则在首次写入（`serialize`）时会抛错。
 
 ## 基础用法
 

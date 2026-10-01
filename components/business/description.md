@@ -105,7 +105,7 @@ const schema = [
 
 ### 无边框模式（默认）
 
-使用 CSS Grid 布局，适合页面内嵌展示：
+`bordered` 原样透传给 Antdv Next 的 `Descriptions`，无边框模式适合页面内嵌展示：
 
 ```vue
 <Description
@@ -116,11 +116,11 @@ const schema = [
 />
 ```
 
-效果为标签-内容的网格排列，无表格线。
+效果为标签-内容的对齐排列，无表格线。
 
 ### 有边框模式
 
-使用 `<table>` 表格布局，适合详情弹窗/抽屉中的结构化展示：
+开启 `bordered` 后由 Antdv Next 的 `Descriptions` 渲染表格边框，适合详情弹窗/抽屉中的结构化展示：
 
 ```vue
 <Description
@@ -132,9 +132,8 @@ const schema = [
 ```
 
 特点：
-- 标签单元格带灰色背景 (`bg-gray-50`)
-- 单元格间有边框分隔
-- 支持跨行跨列 (`span` 属性)
+- 边框样式由 Antdv Next `Descriptions` 的 `bordered` 提供
+- 可通过描述项的 `span` 设置跨列
 
 ## 列数自适应
 
@@ -199,6 +198,18 @@ const schema = [
   { field: 'source', label: '数据来源', value: '系统自动生成' },
   // 无论 data.source 是什么，都显示 "系统自动生成"
 ]
+```
+
+### 作用域插槽
+
+除 `render` / `renderLabel` 外，还支持按字段名注册插槽：`{field}` 覆盖内容、`{field}-label` 覆盖标签，插槽参数为 `{ item, data }`（内容插槽额外带 `value`）：
+
+```vue
+<Description :data="data" :schema="schema">
+  <template #status="{ value }">
+    <a-tag :color="value === 1 ? 'green' : 'red'">{{ value === 1 ? '启用' : '禁用' }}</a-tag>
+  </template>
+</Description>
 ```
 
 ## 完整示例：用户详情页

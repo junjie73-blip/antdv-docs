@@ -188,7 +188,7 @@ import { useLoading } from '~/components/common/Loading'
 const containerRef = useTemplateRef<HTMLElement>()
 
 const loading = useLoading({
-  target: () => containerRef.value!,
+  target: containerRef,
   body: false,
   tip: '加载中...',
 })

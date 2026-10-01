@@ -46,8 +46,10 @@ function handlePrint() {
 | `onBeforePrint` | 打印前回调 | `() => void` | - |
 | `onAfterPrint` | 打印后回调 | `() => void` | - |
 | `showHeader` | 是否显示页眉（标题+打印时间） | `boolean` | `true` |
-| `showFooter` | 是否显示页脚（页码） | `boolean` | `true` |
+| `showFooter` | 是否显示页脚（固定文案「第 / 页」，非真实页码） | `boolean` | `true` |
 | `styles` | 自定义打印样式（追加到默认样式之后） | `string` | - |
+
+> 未找到 `target` 元素或无法创建 iframe 文档时，函数会通过 `message.error` 提示并直接返回（无返回值、不返回 Promise）。`onBeforePrint` 在创建 iframe 前同步调用，`onAfterPrint` 在打印（或取消打印）后调用，随后移除 iframe。
 
 ## iframe 打印原理
 

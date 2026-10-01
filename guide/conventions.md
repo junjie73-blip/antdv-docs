@@ -22,7 +22,7 @@
 import { ref, computed } from 'vue'
 import { cn } from '~/utils/cn'
 
-// 样式类名在 script 中定义，禁止写在模板中
+// 复杂 / 复用样式用 cn() 抽到 constants.ts
 const cardClassName = cn(
   'p-4 rounded-lg',
   'bg-white dark:bg-gray-800',
@@ -30,13 +30,10 @@ const cardClassName = cn(
 </script>
 
 <template>
-  <!-- ✅ 使用 :class 绑定变量 -->
-  <div :class="cardClassName">
+  <!-- ✅ 简单样式直接用 Tailwind 原子类，复杂 / 复用样式绑定 cn() 变量 -->
+  <div class="p-4" :class="cardClassName">
     内容
   </div>
-
-  <!-- ❌ 禁止在模板中直接写 Tailwind 类名 -->
-  <!-- <div class="p-4 rounded-lg bg-white"> </div> -->
 </template>
 ```
 
@@ -44,12 +41,11 @@ const cardClassName = cn(
 
 | 禁止项 | 替代方案 |
 |--------|----------|
-| 模板中写 Tailwind 类名 | 使用 `cn()` 在 script 中定义 |
+| 复杂 / 复用样式堆在模板中 | 使用 `cn()` 抽到 `constants.ts` |
 | 直接使用 `localStorage` | 使用 `localStorageCacheStorage` |
 | 使用 Antdv Next 的 Drawer/Modal | 使用项目的 `BasicDrawer` / `BasicModal` |
 | 手动导入自动导入的组件 | 直接在模板中使用 |
 | 使用 `typeof` 判断类型 | 使用 `es-toolkit` 的类型检查函数 |
-| 使用 `document.querySelector` | 使用 `useTemplateRef` |
 
 ## Git 提交规范
 
@@ -74,7 +70,10 @@ const cardClassName = cn(
 | `refactor` | 重构（非新功能、非修复） |
 | `perf` | 性能优化 |
 | `test` | 测试相关 |
+| `build` | 构建系统或外部依赖变更 |
+| `ci` | CI 配置/脚本变更 |
 | `chore` | 构建/工具/依赖变更 |
+| `revert` | 回滚历史提交 |
 
 ### 示例
 

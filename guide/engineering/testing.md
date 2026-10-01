@@ -1,6 +1,6 @@
 # 测试指南
 
-本项目使用 **Vitest** 进行单元测试，**Playwright** 进行 E2E 测试。完整的测试体系保障代码质量。
+本项目使用 **Vitest** 进行单元测试，**Playwright** 进行 E2E 测试，测试框架与配置已就绪；但**模板仅内置脚手架，未附带任何测试用例**（详见下文说明）。
 
 ## Vitest 单元测试配置
 
@@ -44,7 +44,7 @@ pnpm run test:unit
 # 监听模式（文件变更自动重跑）
 pnpm run test:unit -- --watch
 
-# 覆盖率报告
+# 覆盖率报告（需先安装覆盖率提供器，如 @vitest/coverage-v8）
 pnpm run test:unit -- --coverage
 
 # 运行指定测试文件

@@ -25,6 +25,7 @@ const userImportTemplate: TemplateColumn[] = [
     module="/user"
     :export-params="{ ids: tableMethods?.getSelectRowKeys() }"
     :import-template="userImportTemplate"
+    :permissions="['system:user:import', 'system:user:export']"
   />
 </template>
 ```
@@ -47,6 +48,7 @@ const userImportTemplate: TemplateColumn[] = [
 | `onImportSuccess` | 导入成功后的回调 | `(result: ImportResult) => void` | - |
 | `onExportSuccess` | 导出成功后的回调 | `() => void` | - |
 | `onImportError` | 导入部分失败时的自定义处理，返回 `true` 表示已处理，不再弹默认结果弹窗 | `(result: ImportResult) => boolean \| void` | - |
+| `permissions` | 权限标识数组，`[0]` 用于导入按钮、`[1]` 用于导出按钮（必填） | `string[]` | - |
 
 > 注意 `onImportSuccess` / `onExportSuccess` / `onImportError` 是 **Props 形式的回调**，不是组件事件，模板中写作 `:on-import-success="..."`。
 
@@ -98,6 +100,7 @@ interface ImportResult {
 <script setup lang="ts">
 import ImportExport from '~/components/business/ImportExport.vue'
 import { type ActionItem, BasicTable, TableAction, useTable } from '~/components/business/Table'
+import { SYSTEM_PERMS } from '~/enums/permissions'
 
 import { USER_IMPORT_TEMPLATE, userActionColumn, userColumns, userRowKey } from './columns'
 
@@ -118,6 +121,7 @@ const [tableRegister, tableMethods] = useTable()
         module="/user"
         :export-params="{ ids: tableMethods?.getSelectRowKeys() }"
         :import-template="USER_IMPORT_TEMPLATE"
+        :permissions="[SYSTEM_PERMS.user.import, SYSTEM_PERMS.user.export]"
       />
     </template>
   </BasicTable>
@@ -143,6 +147,7 @@ export const USER_IMPORT_TEMPLATE: TemplateColumn[] = [
   <ImportExport
     module="/user"
     :import-template="USER_IMPORT_TEMPLATE"
+    :permissions="['system:user:import', 'system:user:export']"
     :on-import-success="() => tableMethods?.reload()"
   />
 </template>

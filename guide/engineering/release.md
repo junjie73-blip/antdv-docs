@@ -1,6 +1,6 @@
 # 版本发布
 
-本项目使用 [standard-version](https://github.com/conventional-changelog/standard-version) 自动化版本管理，基于 **Angular 提交规范** 生成 CHANGELOG 和 Git Tag。
+本项目使用 [standard-version](https://github.com/conventional-changelog/standard-version) 自动化版本管理，基于 **Angular 提交规范** 生成 CHANGELOG 并升级版本号（因 `skip.tag: true`，不会自动创建 Git Tag，需手动打 Tag）。
 
 ## standard-version 工具配置
 
@@ -99,11 +99,11 @@
 
 #### `pnpm run release:first` — 首次发布
 
-用于项目首次发布，从 `0.0.0` 开始：
+用于项目首次发布。`--first-release` 会跳过版本号自增，直接沿用 `package.json` 当前的 `version`（当前为 `0.1.0`），只生成 `CHANGELOG.md` 与 release commit：
 
 ```bash
 pnpm run release:first
-# 输出: 1.0.0 (首个正式版本)
+# 输出: 沿用 package.json 现有版本 0.1.0（不做版本升级）
 ```
 
 **适用场景：** 项目首次对外发布

@@ -56,50 +56,49 @@ twMerge('px-4 py-2 px-8')  // → 'py-2 px-8' (px-4 被 px-8 覆盖)
 - 排版：`text-sm`, `text-lg`, `font-bold` 等
 - 其他：`rounded-*`, `shadow-*`, `opacity-*` 等
 
-## 为什么禁止模板中直接写 Tailwind 类名
+## 什么时候该用 `cn`
 
-本项目有明确的编码规范（见 `CODE_STANDARD.md` 第 2 节「CSS 类：Tailwind 优先，复杂用 `cn()`」与第 7 节「样式」）：
+项目编码规范见 `CODE_STANDARD.md` 第 7 节「样式」，其中 7.1 给出的样式优先级是：
 
-> **禁止在模板中直接编写 Tailwind 类名，应使用 `cn` 函数在 `<script setup>` 中预先定义类名变量；`cn` 的调用也不要写在模板里。**
+1. Tailwind 原子类
+2. `cn()` 合并（`clsx` + `tailwind-merge`）
+3. `:deep()` 修改第三方组件
+4. `<style scoped>`（仅在必须时）
 
-### 错误写法 ❌
-
-```vue
-<!-- 直接在模板中写类名 -->
-<div class="bg-red-500 text-white p-4 rounded">内容</div>
-
-<!-- 在模板中调用 cn -->
-<div :class="cn('bg-red-500', 'text-white')">内容</div>
-```
-
-### 正确写法 ✅
+规范**并不禁止**在模板里写 Tailwind 原子类——固定不变的静态类名直接写在 `class` 上即可（源码中大量如此）。`cn` 的用武之地是**需要按条件拼接、且拼接结果可能互相冲突**的场景：
 
 ```vue
 <script setup lang="ts">
 import { cn } from '~/utils/cn'
 
-// 在 script 中定义类名变量
-const cardClassName = cn(
-  'bg-red-500',
-  'text-white',
-  'p-4',
-  'rounded',
+const props = defineProps<{ active?: boolean, size?: 'sm' | 'lg' }>()
+
+// 条件类名有覆盖风险：默认尺寸与放大尺寸都产出 px-*，必须交给 twMerge 决定谁生效
+const buttonClassName = computed(() =>
+  cn('px-4 py-2 rounded', props.size === 'lg' && 'px-8', props.active && 'bg-blue-500'),
 )
 </script>
 
 <template>
-  <!-- 在模板中使用变量绑定 -->
-  <div :class="cardClassName">内容</div>
+  <button :class="buttonClassName">提交</button>
 </template>
 ```
 
-### 这样做的好处
+### 抽离到 `constants.ts`
 
-1. **逻辑集中** — 类名计算逻辑集中在 `<script>` 中，模板更简洁
-2. **可复用** — 类名变量可以在多处使用，避免重复
-3. **可调试** — 可以在 script 中打断点检查最终生成的类名字符串
-4. **条件组合更清晰** — 复杂的条件类名在 script 中处理更直观
-5. **符合 Vue 3 最佳实践** — 减少模板中的复杂表达式
+规范 7.2 要求：组件内较复杂的类名组合抽到同模块的 `constants.ts`，模板只引用变量，保持模板简洁：
+
+```ts
+// constants.ts
+export const containerClassName = cn('space-y-4')
+export const cardClassName = cn('shadow-sm', 'rounded-lg')
+```
+
+```vue
+<div :class="containerClassName">
+```
+
+好处是类名计算逻辑集中、可复用，并且能直接在 `<script>` 里打断点检查最终生成的字符串。
 
 ## 使用规范
 

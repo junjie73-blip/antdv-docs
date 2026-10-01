@@ -4,7 +4,7 @@
 
 | 变量名 | 类型 | 默认值 | 说明 |
 |--------|------|--------|------|
-| `VITE_NAMESPACE` | string | antdv | 缓存 / 存储 key 的命名空间前缀 |
+| `VITE_NAMESPACE` | string | antdv | 应用命名空间（代码未引用；缓存 key 前缀实际取自 `VITE_APP_TITLE`） |
 | `VITE_APP_TITLE` | string | Antdv Admin | 项目标题（显示在浏览器标签页） |
 | `VITE_PORT` | number | 5680（开发）/ 9080（生产） | 开发服务器端口 |
 | `VITE_APP_BASE_API` | string | /api/v1 | API 基础路径 |
@@ -12,7 +12,8 @@
 | `VITE_PROXY` | array | - | 开发代理配置：`[[前缀, 目标地址], ...]` |
 | `VITE_MOCK` | boolean | false | 是否启用 Mock 数据 |
 | `VITE_INJECT_APP_LOADING` | boolean | true | 是否注入应用启动加载动画 |
-| `VITE_DEVTOOLS` | boolean | true（开发） | 是否启用 Vue DevTools |
+| `VITE_MICRO_APP` | boolean | false | 是否启用微前端（`src/config/micro-app.ts`） |
+| `VITE_DEVTOOLS` | boolean | false（开发） | 是否启用 Vue DevTools |
 | `VITE_PWA` | boolean | true | 是否启用 PWA |
 | `VITE_VISUALIZER` | boolean | true（生产） | 是否启用构建分析可视化 |
 | `VITE_COMPRESS` | string | gzip | 压缩格式：gzip / brotli / none |
@@ -58,7 +59,7 @@ VITE_INJECT_APP_LOADING=true
 VITE_MOCK=false
 
 # 启用 Vue DevTools
-VITE_DEVTOOLS=true
+VITE_DEVTOOLS=false
 
 # API 基础路径与后端地址
 VITE_APP_BASE_API=/api/v1
@@ -82,6 +83,12 @@ VITE_ARCHIVER=true
 
 # 生产端口
 VITE_PORT=9080
+
+# 注入应用加载动画
+VITE_INJECT_APP_LOADING=true
+
+# 生产启用 Mock
+VITE_MOCK=true
 
 # 启用构建分析可视化
 VITE_VISUALIZER=true

@@ -64,20 +64,21 @@ Vite 会自动尝试下一个可用端口（5680 → 5681 → 5682 ...）
 
 ### 样式不生效？
 
-检查是否使用了 `cn()` 函数生成类名，禁止在模板中直接写 Tailwind 类名。
+Tailwind 原子类可以直接写在模板的 `class` 上；只有需要按条件动态拼接、可能出现同类冲突的类名时，才用 `cn()`（内部为 `clsx` + `tailwind-merge`）合并。
 
 ```vue
-<!-- ✅ 正确 -->
-<script setup>
+<script setup lang="ts">
+import { computed } from 'vue'
 import { cn } from '~/utils/cn'
-const className = cn('bg-red-500', 'text-white')
+
+const isActive = ref(false)
+const className = computed(() => cn('rounded px-2', isActive.value && 'bg-red-500'))
 </script>
 <template>
-  <div :class="className">内容</div>
-</template>
-
-<!-- ❌ 错误 -->
-<template>
-  <div class="bg-red-500 text-white">内容</div>
+  <!-- 静态样式：直接写 Tailwind 类 -->
+  <div class="text-white">
+    <!-- 动态合并、去重类名：走 cn() -->
+    <span :class="className">内容</span>
+  </div>
 </template>
 ```
