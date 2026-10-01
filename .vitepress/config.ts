@@ -219,7 +219,7 @@ export default defineConfig({
     socialLinks: [
       {
         icon: "github",
-        link: "https://github.com/junjie73-blip/antdv-next-admin.git",
+        link: "https://github.com/junjie73-blip/antdv-docs.git",
       },
     ],
 
