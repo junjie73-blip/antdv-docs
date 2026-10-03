@@ -6,7 +6,7 @@
 
 ```vue
 <script setup lang="ts">
-import { usePrint } from '~/utils/print'
+import { usePrint } from '~/composables/print'
 
 function handlePrint() {
   usePrint({
@@ -249,7 +249,7 @@ usePrint({
 
 ```vue
 <script setup lang="ts">
-import { usePrint } from '~/utils/print'
+import { usePrint } from '~/composables/print'
 import { BasicTable } from '~/components/business/Table'
 import { useTable } from '~/components/business/Table/useTable'
 
@@ -288,7 +288,7 @@ function handlePrintTable() {
 
 ```vue
 <script setup lang="ts">
-import { usePrint } from '~/utils/print'
+import { usePrint } from '~/composables/print'
 import { Description } from '~/components/business/Description'
 
 function handlePrintDetail() {

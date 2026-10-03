@@ -333,64 +333,41 @@ function resolveAccess(binding, helpers) {
 Token 是权限验证的基础凭证，通过 Alova 请求拦截器自动注入：
 
 ```ts
-// src/utils/token/index.ts
-import { TOKEN_KEY } from '~/config/constants'
+// src/utils/request/alova.ts 的请求前置校验（节选）
+import { TOKEN_KEY, REFRESH_TOKEN_KEY } from '~/config/constants'
 import { cache } from '~/utils/cache'
 
-export function getToken(): string | null {
-  const token = cache.getItem(TOKEN_KEY)
-  return typeof token === 'string' ? token : null
-}
+const accessToken = cache.getItem(TOKEN_KEY)
+const refreshToken = cache.getItem(REFRESH_TOKEN_KEY)
 
-export function setToken(token: string, expire?: number): void {
-  cache.setItem(TOKEN_KEY, token, expire)
-}
-
-export function removeToken(): void {
-  cache.removeItem(TOKEN_KEY)
-}
-
-export function clearAuth(): void {
-  removeToken()
-  cache.removeItem('auth-store')
-  cache.removeItem('user-info')
-}
+// 无 accessToken → 有 refreshToken 则主动刷新，否则强制登出
+// accessToken 剩余不足 60s → 有 refreshToken 则提前刷新
 ```
 
 ### 请求拦截器注入
 
 ```ts
-// src/utils/request/alova.ts 中的 beforeRequest
-const userStore = useUserStore()
+// src/composables/web/request/fetcher.ts:67
+import { AUTHORIZATION_KEY } from '~/utils/request/constant'
 
-// ---------- 加上 Authorization 头 ----------
-if (userStore.token) {
-  method.config.headers = {
-    ...method.config.headers,
-    [AUTHORIZATION_KEY]: `Bearer ${userStore.token}`,
-  }
+const headers = {
+  [AUTHORIZATION_KEY]: `Bearer ${userStore.token || cache.getItem(TOKEN_KEY)}`,
 }
 ```
 
 ### Token 数据流
 
 ```
-┌──────────┐    登录成功     ┌──────────────┐
-│  Login    │ ─────────────→ │  setToken()   │
-│  Page     │               │  写入 cache   │
-└──────────┘               └──────┬───────┘
-                                  │ 存储
-                                  ▼
-                          ┌──────────────┐
-                          │ localStorage │
-                          │  CacheStorage│
-                          └──────┬───────┘
-                                  │ 读取
-                                  ▼
-┌──────────┐    发起请求     ┌──────────────┐
-│  Alova   │ ←──────────── │  getToken()   │
-│  HTTP    │   自动注入Header│              │
-└──────────┘               └──────────────┘
+Login 页登录成功
+   │
+   ▼
+userStore.setToken(accessToken, refreshToken)   ← 同时更新 ref 与 cache
+   │
+   ▼
+localStorage（CacheStorage，键前缀 + 生产环境 SM4 加密）
+   │
+   ▼
+请求前置：cache.getItem(TOKEN_KEY) → 注入 Authorization: Bearer <token>
 ```
 
 ---
@@ -600,5 +577,5 @@ const isSuperAdmin = computed(() => isAdmin())
 - **前端权限仅用于 UI 控制**，不能替代后端权限校验
 - 所有敏感操作必须在服务端验证权限
 - Token 应设置合理的过期时间，定期刷新
-- 用户登出时必须清除所有认证信息（`clearAuth()`）
+- 用户登出时必须清除所有认证信息（`userStore.logout()`，内部 `cache.clear()`）
 :::

@@ -10,7 +10,7 @@
 | CSRF 防护 | `~/utils/csrf` | Token 生成与管理 |
 | 数据脱敏 | `~/utils/masking` | 手机号、邮箱等掩码 |
 | 哈希 / 加密 | `~/utils/crypto` | MD5 / SHA-256、SM4 加解密、JWT 签名 |
-| Token 存取 | `~/utils/token` | accessToken 的读写与清理 |
+| Token 存取 | `~/utils/cache` + `~/stores/modules/user` | accessToken / refreshToken 的读写与清理 |
 | JWT 解析 | `~/utils/jwt` | 前端解析 payload、判断过期 |
 
 ## 应用启动初始化
@@ -310,19 +310,42 @@ import {
 
 ## Token 与 JWT
 
-### Token 存取（~/utils/token）
+### Token 存取（cache + useUserStore）
+
+项目**没有** `~/utils/token` 模块。accessToken / refreshToken 统一由 `cache` 单例（`~/utils/cache`）持久化，键常量定义在 `~/config/constants`：
 
 ```ts
-import { getToken, setToken, removeToken, hasToken, clearAuth } from '~/utils/token'
+import { TOKEN_KEY, REFRESH_TOKEN_KEY } from '~/config/constants'
+import { cache } from '~/utils/cache'
 
-getToken()            // string | null，底层走 cache.getItem(TOKEN_KEY)
-setToken(token, 7200) // expire 单位秒，可选
-removeToken()
-hasToken()            // boolean
-clearAuth()           // 清 auth_token + 'auth-store' + 'user-info'
+cache.getItem(TOKEN_KEY)              // string | null
+cache.setItem(TOKEN_KEY, token, 7200) // expire 单位秒，可选
+cache.removeItem(TOKEN_KEY)
 ```
 
-`TOKEN_KEY = 'auth_token'`，`REFRESH_TOKEN_KEY = 'refresh_token'`（来自 `~/config/constants`）。
+`TOKEN_KEY = 'auth_token'`，`REFRESH_TOKEN_KEY = 'refresh_token'`。
+
+组件内**不要**直接读写缓存，统一走 `useUserStore`（`~/stores/modules/user`）：
+
+| Store 成员 | 说明 |
+|-----------|------|
+| `token` / `refreshToken` | 由缓存初始化的响应式令牌（`Ref<string \| null>`） |
+| `isLoggedIn` | `!!token` |
+| `setToken(accessToken, refreshToken)` | 同时更新 ref 与 `cache`（不接收 expire 参数） |
+| `login(...)` / `logout()` | 登录写入、登出清理 |
+| `setUserInfo(info)` / `fetchCurrentUser()` | 用户信息读写 |
+| `hasPermission(code)` / `hasRole(role)` | 权限判断 |
+
+```ts
+const userStore = useUserStore()
+
+userStore.token            // 读取
+userStore.setToken(at, rt) // 写入
+```
+
+::: warning logout 会清空整个缓存前缀
+`userStore.logout()` 内部执行 `cache.clear()` + `requestCache.clear()` 并跳转 `/login`。`cache.clear()` 清的是**当前前缀下的全部键**，不仅是令牌；若缓存里还存了其它业务数据，需留意这一副作用。
+:::
 
 ### JWT 解析（~/utils/jwt）
 

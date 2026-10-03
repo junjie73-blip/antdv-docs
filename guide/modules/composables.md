@@ -1,10 +1,10 @@
 # 组合式函数
 
-`src/composables/` 下是项目自研的组合式函数（composable），覆盖请求、上传、水印、主题切换、SSE 等场景。
+`src/composables/` 下是项目自研的组合式函数（composable），覆盖请求、缓存、通知、文件读取、上传、打印、水印、主题切换、SSE、ECharts 等场景。
 
 ## 导入路径
 
-统一出口 `~/composables` 只导出 5 个成员，其余组合式函数必须按全路径导入：
+统一出口 `~/composables`（`src/composables/index.ts`）导出 `useCRUD`、`usePermission`、`useSSE`、`useWatermark`、`useCache` 以及请求系（`export * from './web/request'`）；其余组合式函数必须按全路径导入：
 
 | 组合式函数 | 导入路径 |
 |-----------|---------|
@@ -12,8 +12,12 @@
 | `usePermission` | `~/composables`（见 [权限系统](/guide/features/permission)） |
 | `useSSE` | `~/composables` 或 `~/composables/web/sse` |
 | `useWatermark` | `~/composables` 或 `~/composables/web/useWatermark` |
-| `useWelcomeNotification` | `~/composables` |
-| `useAppRequest` / `useAppWatcher` / `useAppParallelRequest` | `~/composables/useRequest` |
+| `useAppRequest` / `useAppWatcher` / `useAppParallelRequest` | `~/composables`（源码位于 `~/composables/web/request/`） |
+| `useCache` | `~/composables` 或 `~/composables/useCache` |
+| `useNotice` | `~/composables/useNotice` |
+| `useFileReader` | `~/composables/useFileReader` |
+| `usePrint` | `~/composables/print` |
+| `useEcharts` / `setupEcharts` | `~/composables/echarts/useEcharts`、`~/composables/echarts/setup` |
 | `usePasswordPolicy` | `~/composables/usePasswordPolicy` |
 | `useRouteLoading` | `~/composables/useRouteLoading` |
 | `useChunkUpload` | `~/composables/useChunkUpload` |
@@ -29,7 +33,7 @@
 
 ## useAppRequest
 
-对 alova `useRequest` 的封装（`src/composables/useRequest.ts`），在原生能力上增加了响应体自动解构（`{ code, data }` → `data`）和统一提示。
+对 alova `useRequest` 的封装（`src/composables/web/request/`），在原生能力上增加了响应体自动解构（`{ code, data }` → `data`）和统一提示。
 
 ### 选项
 
@@ -60,7 +64,7 @@
 
 ```ts
 import { ref } from 'vue'
-import { useAppRequest } from '~/composables/useRequest'
+import { useAppRequest } from '~/composables'
 import { get } from '~/api/request'
 
 const params = ref({ page: 1, pageSize: 10 })
@@ -306,33 +310,162 @@ toggleThemeWithAnimation(event)
 
 ---
 
-## useWelcomeNotification
+## useNotice
 
-登录欢迎通知（`src/composables/web/useWelcomeNotification.ts`），基于 `antdv-next` 的 `notification`。
+站内通知的统一状态源（`src/composables/useNotice.ts`）。**模块级单例**：`list` / `unreadCount` / `loading` 定义在模块作用域，所有调用方共享同一份数据。
 
-`showWelcomeNotification(username: string, options?)`
+`useNotice()` 无参数，返回值：
 
-| 选项字段 | 类型 | 默认值 |
-|---------|------|--------|
-| `duration` | `number` | `4.5` |
-| `closable` | `boolean` | `true` |
-| `className` | `string` | - |
-| `onClick` | `() => void` | - |
-| `onClose` | `() => void` | - |
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `list` | `Ref<NoticeRecord[]>` | 通知列表，实时推送时头部插入、最多保留 20 条 |
+| `unreadCount` | `Ref<number>` | 未读数 |
+| `loading` | `Ref<boolean>` | `loadList` 进行中 |
+| `hasUnread` | `ComputedRef<boolean>` | `unreadCount > 0` |
+| `loadList` | `(params?: { pageNum?: number; pageSize?: number }) => Promise<NoticeRecord[]>` | 拉取列表，默认 `pageNum=1` / `pageSize=10` |
+| `refreshUnreadCount` | `() => Promise<void>` | 重新拉取未读数（失败静默） |
+| `read` | `(item: NoticeRecord \| NotificationItem) => Promise<void>` | 单条已读，乐观更新，失败回滚并抛出 |
+| `readAll` | `(params?: { source?: string; noticeType?: number }) => Promise<void>` | 全部已读，乐观更新，失败回滚并抛出 |
+| `removeLocal` | `(noticeId: string) => void` | 仅从本地列表移除，不发请求 |
 
-通知内容由 `getPersonalizedWelcome(username)` 生成，固定 `placement: 'bottomRight'`。
+`NoticeRecord` 字段：`noticeId` / `noticeType` / `source`（`'notice' | 'workflow' | 'report' | 'system'`）/ `title` / `content` / `isRead`（`0 | 1`）/ `priority` / `publishTime` / `bizType` / `bizId` / `bizSource`。接口返回的 snake_case 字段会被 `transformItem` 兼容映射。
 
 ```ts
-import { showWelcomeNotification } from '~/composables'
+import { useNotice } from '~/composables/useNotice'
 
-showWelcomeNotification('admin')
+const { list, unreadCount, loadList, read, readAll } = useNotice()
+
+await loadList({ pageNum: 1, pageSize: 20 })
+await read(list.value[0]!)
 ```
 
-`useWelcomeNotification()` 返回 `{ showWelcomeNotification, closeWelcomeNotifications }`。
+::: warning 只在首次调用时注册 WS 监听
+`initialized` 是模块级标志，**只有第一次调用 `useNotice()`** 才会注册 WebSocket 的 `onNotice` / `onRevoke` 监听并拉取一次未读数（`useNotice.ts:64-68`）。若应用启动后始终没有组件调用过它，后续任何页面都收不到实时推送，`loadList` 也只能拿到历史数据。
 
-::: warning closeWelcomeNotifications 会关掉所有通知
-`closeWelcomeNotifications()` 内部直接调用 `notification.destroy()`（`useWelcomeNotification.ts:44`），会清除当前页面上**全部**通知，而不只是欢迎通知。
+另外 `read` / `readAll` 的乐观更新会**直接改写传入对象的 `isRead`**（`removeLocal` 亦会改动共享的 `list`），若把列表项作为 props 往下传，需注意这层隐式响应式副作用。
 :::
+
+---
+
+## useCache
+
+响应式缓存组合式函数（`src/composables/useCache.ts`），基于 vueuse 的 `useStorage` + 项目 `cache` 单例，提供「读 ref 即读缓存、写 ref 即落缓存」的体验，并支持同浏览器跨标签页同步。
+
+`useCache<T>(key: string, options?: UseCacheOptions)`
+
+| 选项字段 | 类型 | 默认值 | 说明 |
+|---------|------|--------|------|
+| `defaultValue` | `T \| null` | `null` | 键不存在时的初始值 |
+| `expire` | `number` | `0` | 过期时间（秒），`0` 表示永不过期 |
+| `deep` | `boolean` | `true` | 深度监听 `value` 变化并自动写回 |
+| `immediate` | `boolean` | - | 类型中已声明，**源码未使用** |
+
+返回值（`UseCacheReturn<T>` = `{ key, value }` + `CacheInstance` 全量方法）：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `key` | `string` | 当前缓存键 |
+| `value` | `Ref<T \| null>` | 响应式值，读时反序列化、写时持久化；赋 `null` 会删除该项 |
+| `getItem` / `setItem` / `removeItem` / `hasItem` | 同 `cache` 单例 | 透传的同步 KV 方法 |
+| `clear` / `keys` / `getExpire` / `setExpire` / `touch` | 同 `cache` 单例 | 透传 |
+
+```ts
+import { useCache } from '~/composables'
+
+const { value, removeItem } = useCache<{ name: string }>('user-info', { expire: 3600 })
+
+value.value = { name: 'Tom' } // 写入
+console.log(value.value)      // 读取
+```
+
+::: warning 与 `cache` 单例的差异
+`cache` 是纯同步 KV 存储（无响应式，键为 `前缀_key`、生产环境走 SM4 加密）；`useCache` 在其之上加了一层 ref，但有两点需注意：
+
+1. 内部 `useStorage` 直接以**原始 `key`** 写入 `localStorage`，**未带 `cache` 的前缀与加密**。因此写一次 `value` 实际会产生两条记录：vueuse 的原始键（明文 JSON）与 `cache` 的前缀键（加密）。
+2. 类型声明的 `immediate` 选项在实现中被忽略，不会「立即写回默认值」。
+
+若只需要一次性读写、不关心响应式，直接用 `cache` 更省事。
+:::
+
+---
+
+## useFileReader
+
+`FileReader` 的 Promise 化封装（`src/composables/useFileReader.ts`），常用于选择图片后做本地预览。
+
+`useFileReader()` 无参数，返回值：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `result` | `Readonly<Ref<string \| ArrayBuffer \| null>>` | 最近一次读取结果 |
+| `isLoading` | `Readonly<Ref<boolean>>` | 读取中 |
+| `error` | `Readonly<Ref<Error \| null>>` | 失败原因（固定 `new Error('文件读取失败')`） |
+| `read` | `(file: File, readAs?: 'readAsDataURL' \| 'readAsText' \| 'readAsArrayBuffer') => Promise<string \| ArrayBuffer>` | 读取文件，默认 `readAsDataURL` |
+| `reset` | `() => void` | 清空 `result` / `error` / `isLoading` |
+
+```ts
+import { useFileReader } from '~/composables/useFileReader'
+
+const { result, isLoading, read, reset } = useFileReader()
+
+await read(file)          // 默认转 DataURL，适合预览
+console.log(result.value) // data:image/png;base64,...
+reset()
+```
+
+::: warning 只读 ref 不可外部改写，且没有取消能力
+`result` / `isLoading` / `error` 均被 `readonly()` 包裹，外部赋值无效（开发环境会告警）。每次 `read` 都新建一个 `FileReader`，**不提供 abort/取消**；连续调用时以最后完成的那次结果为准。若需读取文本或二进制，记得显式传 `readAs`。
+:::
+
+---
+
+## usePrint
+
+基于隐藏 iframe 的浏览器打印（`src/composables/print.ts`），完整用法、自定义样式与业务集成示例见 [打印工具 (usePrint)](/components/utils/print)。
+
+`usePrint(options: PrintOptions): void` —— **同步执行、无返回值**。
+
+| 选项字段 | 类型 | 默认值 | 说明 |
+|---------|------|--------|------|
+| `title` | `string` | `document.title` | 打印标题，同时作为 iframe 文档标题与页眉标题 |
+| `target` | `string \| HTMLElement` | 必填 | 要打印的元素或 CSS 选择器 |
+| `onBeforePrint` | `() => void` | - | 创建 iframe 前同步调用 |
+| `onAfterPrint` | `() => void` | - | 打印（或取消）后调用，随后移除 iframe |
+| `showHeader` | `boolean` | `true` | 页眉（标题 + 打印时间） |
+| `showFooter` | `boolean` | `true` | 页脚（固定文案「第 / 页」，非真实页码） |
+| `styles` | `string` | - | 追加到默认打印样式之后 |
+
+```ts
+import { usePrint } from '~/composables/print'
+
+usePrint({ title: '用户列表', target: '#print-area' })
+```
+
+::: warning 三处实现细节
+1. 找不到 `target` 元素、或无法创建 iframe 文档时，只 `message.error` 提示后**直接 return**，不抛错也不返回 Promise，调用方无法感知失败。
+2. `onAfterPrint` 可能被触发两次：`contentWindow.onload` 中的 `setTimeout` 与 `afterprint` 监听各调一次（`print.ts:116-135`），且 `afterprint` 分支未做去重。
+3. 打印内容取自 `el.innerHTML`，页面样式表不会被带入 iframe，仅内置默认样式 + `styles` 生效，需要其它样式请通过 `styles` 补齐。
+:::
+
+---
+
+## useEcharts 与 ECharts 组件
+
+ECharts 组合式函数位于 `src/composables/echarts/`，配套组件在 `src/components/common/ECharts/`，完整 API、`UseEchartsOptions` / `UseEchartsReturn` 逐字段说明与已知问题见 [ECharts 图表](/components/common/echarts)。
+
+```ts
+import { setupEcharts } from '~/composables/echarts/setup'
+import { useEcharts } from '~/composables/echarts/useEcharts'
+
+setupEcharts() // 幂等注册所需的图表 / 组件 / Canvas 渲染器
+
+const { containerRef, chart, isReady, setOption, resize, dispose, showLoading, hideLoading } = useEcharts(option, {
+  autoResize: true,
+  resizeStrategy: 'raf', // 'raf' | 'debounce' | 'throttle' | 'none'
+})
+```
+
+`useEcharts<T>(initialOption?, options?)` 会在容器尺寸为 0 时跳过初始化并自动重试（最多 5 次、间隔 100ms），`tryOnBeforeUnmount` 时自动 `dispose()`；`setData()` 目前是空实现，调用无效果。
 
 ---
 

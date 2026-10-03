@@ -24,29 +24,40 @@ antdv-next-admin/
 │   │   │   ├── TenantSelect.vue  #     租户选择
 │   │   │   └── MicroAppContainer.vue  # 微前端容器 ⭐
 │   │   ├── common/               #   通用组件
+│   │   │   ├── Auth/             #     登录 / 注册页组件族
+│   │   │   ├── ECharts/          #     ECharts 图表容器
 │   │   │   ├── Icon/             #     图标 / 图标选择器
 │   │   │   ├── Loading/          #     全局加载
 │   │   │   ├── Scrollbar/        #     滚动条
 │   │   │   ├── Skeleton/         #     骨架屏
 │   │   │   ├── Upload/           #     上传组件（含 ChunkUpload 分片上传）
-│   │   │   └── CronEditor/       #     Cron 表达式编辑器
+│   │   │   ├── CronEditor/       #     Cron 表达式编辑器
+│   │   │   ├── AvatarUploader.vue #    头像上传
+│   │   │   ├── EmptyState.vue    #     空状态占位
+│   │   │   ├── ErrorBoundary.vue #     错误边界
+│   │   │   ├── PreviewDialog.vue #     预览弹窗
+│   │   │   └── StatusTag.vue     #     状态标签
 │   │   └── layout/               #   布局通用组件
 │   │       ├── PageTransition.vue  #   页面过渡动画
 │   │       └── ReloadPrompt.vue    #   PWA 更新提示
 │   ├── composables/              # 组合式函数
 │   │   ├── useCRUD.ts            #   增删改查封装 ⭐
-│   │   ├── useRequest.ts         #   请求封装
+│   │   ├── useCache.ts           #   响应式缓存
 │   │   ├── useChunkUpload.ts     #   分片上传
+│   │   ├── useFileReader.ts      #   文件读取
+│   │   ├── useNotice.ts          #   站内通知（模块级单例）
 │   │   ├── usePasswordPolicy.ts  #   密码策略
 │   │   ├── useRouteLoading.ts    #   路由加载
+│   │   ├── print.ts              #   浏览器打印（usePrint）
+│   │   ├── echarts/              #   ECharts 封装（useEcharts / setupEcharts）
 │   │   └── web/                  #   Web 相关
 │   │       ├── permission/       #     权限管理
 │   │       ├── websocket/        #     WebSocket
 │   │       ├── sse/              #     SSE 事件流
+│   │       ├── request/          #     请求封装（useAppRequest 等）
 │   │       ├── useLocale.ts      #     语言切换 ⭐
 │   │       ├── useThemeTransition.ts   # 主题切换过渡
-│   │       ├── useWatermark.ts   #     水印功能
-│   │       └── useWelcomeNotification.ts  # 欢迎通知
+│   │       └── useWatermark.ts   #     水印功能
 │   ├── config/                   # 项目配置
 │   │   ├── color.ts              #   颜色常量
 │   │   ├── constants.ts          #   全局常量

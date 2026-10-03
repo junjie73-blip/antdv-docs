@@ -161,6 +161,13 @@ export default defineConfig({
               text: "PreviewDialog 预览弹窗",
               link: "/components/common/preview-dialog",
             },
+            { text: "Auth 认证组件族", link: "/components/common/auth" },
+            {
+              text: "AvatarUploader 头像上传",
+              link: "/components/common/avatar-uploader",
+            },
+            { text: "EmptyState 空状态", link: "/components/common/empty-state" },
+            { text: "ECharts 图表", link: "/components/common/echarts" },
           ],
         },
         {

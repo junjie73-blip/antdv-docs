@@ -131,7 +131,7 @@ method.config.headers[AUTHORIZATION_KEY] = `Bearer ${accessToken}`
     ▼
 POST /auth/refresh { refreshToken }
     │
-    ├─ 成功 → setToken(newToken) → 重发原请求
+    ├─ 成功 → 更新缓存中的 access / refresh token（TOKEN_KEY / REFRESH_TOKEN_KEY）→ 重发原请求
     │
     └─ 失败 → forceLogout()（清 token + 跳 /login，不调登出接口）→ 抛 handled=true 的错误
 ```

@@ -258,7 +258,7 @@ exportToExcel({
 ### 工具位置
 
 ```ts
-import { usePrint } from '~/utils/print'
+import { usePrint } from '~/composables/print'
 ```
 
 ### PrintOptions 接口
@@ -390,7 +390,7 @@ export interface PrintOptions {
 </template>
 
 <script setup lang="ts">
-import { usePrint } from '~/utils/print'
+import { usePrint } from '~/composables/print'
 
 function handlePrint() {
   usePrint({
@@ -545,7 +545,7 @@ tr:nth-child(even) { background-color: #fafafa; }
 <!-- views/monitor/log/index.vue -->
 <script setup lang="ts">
 import { exportToExcel } from '~/utils/excel'
-import { usePrint } from '~/utils/print'
+import { usePrint } from '~/composables/print'
 
 const logColumns = [
   { title: '操作人', dataIndex: 'operator' },
@@ -622,7 +622,7 @@ function handlePrintLog() {
 <!-- views/system/user/index.vue -->
 <script setup lang="ts">
 import { exportToExcel } from '~/utils/excel'
-import { usePrint } from '~/utils/print'
+import { usePrint } from '~/composables/print'
 
 // 用户列表导出（含复杂字段映射）
 function handleExportUsers() {
